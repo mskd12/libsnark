@@ -50,44 +50,18 @@ int main(int argc, char **argv) {
 	// only print the circuit output values if both flags MONTGOMERY and BINARY outputs are off (see CMakeLists file)
 	// In the default case, these flags should be ON for faster performance.
 
-// #if !defined(MONTGOMERY_OUTPUT) && !defined(OUTPUT_BINARY)
-// 	cout << endl << "Printing input and output assignment in readable format:: " << endl;
-// 	std::vector<Wire> inputList = reader.getInputWireIds();
-// 	int start = 0;
-// 	int end = reader.getNumInputs();
-// 	for (int i = start ; i < end; i++) {
-// 		cout << "[input]" << " Value of Wire # " << inputList[i] << " :: ";
-// 		cout << primary_input[i];
-// 		cout << endl;
-// 	}
-// 	cout << endl;
-// 	cout << endl << "Printing output assignment in readable format:: " << endl;
-// 	std::vector<Wire> outputList = reader.getOutputWireIds();
-// 	start = reader.getNumInputs();
-// 	end = reader.getNumInputs() +reader.getNumOutputs();	
-// 	for (int i = start ; i < end; i++) {
-// 		cout << "[output]" << " Value of Wire # " << outputList[i-reader.getNumInputs()] << " :: ";
-// 		cout << primary_input[i];
-// 		cout << endl;
-// 	}
-// 	cout << endl;
-// #endif
-
-	ofstream outfile;
-	outfile.open("public_input.in");
-	std::vector<Wire> inputList = reader.getInputWireIds();
-	int start = 0;
-	int end = reader.getNumInputs();
-	for (int i = start ; i < end; i++) {
-		outfile << inputList[i] << " " << primary_input[i] << endl;
-	}
+#if !defined(MONTGOMERY_OUTPUT) && !defined(OUTPUT_BINARY)
+	cout << endl << "Printing output assignment in readable format:: " << endl;
 	std::vector<Wire> outputList = reader.getOutputWireIds();
-	start = reader.getNumInputs();
-	end = reader.getNumInputs() +reader.getNumOutputs();	
+	int start = reader.getNumInputs();
+	int end = reader.getNumInputs() +reader.getNumOutputs();	
 	for (int i = start ; i < end; i++) {
-		outfile << outputList[i-reader.getNumInputs()] << " " << primary_input[i] << endl;
+		cout << "[output]" << " Value of Wire # " << outputList[i-reader.getNumInputs()] << " :: ";
+		cout << primary_input[i];
+		cout << endl;
 	}
-	outfile.close();
+	cout << endl;
+#endif
 
 	//assert(cs.is_valid());
 
@@ -104,37 +78,8 @@ int main(int argc, char **argv) {
 	const bool test_serialization = false;
 	bool successBit = false;
 	if(argc == 3) {
-		// successBit = libsnark::run_r1cs_ppzksnark<libff::default_ec_pp>(example, test_serialization);
-		libff::enter_block("Call to run_r1cs_ppzksnark");
+		successBit = libsnark::run_r1cs_ppzksnark<libff::default_ec_pp>(example, test_serialization);
 
-		libff::print_header("R1CS ppzkSNARK Generator");
-		r1cs_ppzksnark_keypair<libff::default_ec_pp> keypair = r1cs_ppzksnark_generator<libff::default_ec_pp>(example.constraint_system);
-		printf("\n"); libff::print_indent(); libff::print_mem("after generator");
-
-		libff::print_header("Preprocess verification key");
-		r1cs_ppzksnark_processed_verification_key<libff::default_ec_pp> pvk = r1cs_ppzksnark_verifier_process_vk<libff::default_ec_pp>(keypair.vk);
-
-		libff::print_header("R1CS ppzkSNARK Prover");
-		r1cs_ppzksnark_proof<libff::default_ec_pp> proof = r1cs_ppzksnark_prover<libff::default_ec_pp>(keypair.pk, primary_input, auxiliary_input);
-		printf("\n"); libff::print_indent(); libff::print_mem("after prover");
-
-		// serialize proof
-		outfile.open("proof.out");
-		outfile << proof;
-		outfile.close();
-
-		// de-serialize proof
-		ifstream infile;
-		infile.open("proof.out");
-		infile >> proof;
-		infile.close();
-
-		libff::print_header("R1CS ppzkSNARK Verifier");
-		const bool ans = r1cs_ppzksnark_verifier_strong_IC<libff::default_ec_pp>(keypair.vk, primary_input, proof);
-		printf("\n"); libff::print_indent(); libff::print_mem("after verifier");
-		printf("* The verification result is: %s\n", (ans ? "PASS" : "FAIL"));
-
-		// successBit = libsnark::r1cs_ppzksnark_verifier_strong_IC<libff::default_ec_pp>();
 	} else {
 		// The following code makes use of the observation that 
 		// libsnark::default_r1cs_gg_ppzksnark_pp is the same as libff::default_ec_pp (see r1cs_gg_ppzksnark_pp.hpp)
