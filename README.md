@@ -1,7 +1,9 @@
 libsnark: a C++ library for zkSNARK proofs
 ================================================================================
 
-Note: The [jsnark_interface](https://github.com/akosba/jsnark) is modified to create two executables `prover` and `verifier` for demo purposes. `prover` contains the proof generation and circuit generation logic and outputs proof, public input and verification key. `verifier` verifies the generated proof using the verification key and public input. (In practice, circuit generation will need to be seperated out.)
+Note: The [jsnark_interface](https://github.com/akosba/jsnark) is modified to create two executables `prover` and `verifier` for demo purposes. The `prover` executable contains the circuit and proof generation logic; outputs proof, public input and verification key. The `verifier` executable verifies the generated proof using the verification key and public input. 
+
+**In practice, circuit generation will need to be seperated out.**
 
 --------------------------------------------------------------------------------
 Authors and contacts
