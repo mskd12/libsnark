@@ -1,4 +1,3 @@
-
 /*
  * prover.cpp
  * Adapted from run_ppzksnark.cpp
@@ -48,24 +47,6 @@ int main(int argc, char **argv) {
 	const r1cs_auxiliary_input<FieldT> auxiliary_input(
 			full_assignment.begin() + cs.num_inputs(), full_assignment.end());
 
-    // Serialize public input (and output).
-	ofstream outfile;
-	outfile.open("public_input.in");
-    outfile << primary_input;
-	// std::vector<Wire> inputList = reader.getInputWireIds();
-	// int start = 0;
-	// int end = reader.getNumInputs();
-	// for (int i = start ; i < end; i++) {
-	// 	outfile << inputList[i] << " " << primary_input[i] << endl;
-	// }
-	// std::vector<Wire> outputList = reader.getOutputWireIds();
-	// start = reader.getNumInputs();
-	// end = reader.getNumInputs() +reader.getNumOutputs();	
-	// for (int i = start ; i < end; i++) {
-	// 	outfile << outputList[i-reader.getNumInputs()] << " " << primary_input[i] << endl;
-	// }
-	outfile.close();
-
 	//assert(cs.is_valid());
 
 	// removed cs.is_valid() check due to a suspected (off by 1) issue in a newly added check in their method.
@@ -81,21 +62,23 @@ int main(int argc, char **argv) {
 	const bool test_serialization = false;
 	bool successBit = false;
 	if(argc == 3) {
-        ifstream infile;
-        r1cs_ppzksnark_proving_key<libff::default_ec_pp> pk = r1cs_ppzksnark_proving_key<libff::default_ec_pp>();
-        infile.open("proving_key.out");
-        infile >> pk;
-        infile.close();
-        cout << "Deserialized proving key" << endl;
+		libff::enter_block("Call to run_r1cs_ppzksnark");
 
+		libff::print_header("R1CS ppzkSNARK Generator");
+		r1cs_ppzksnark_keypair<libff::default_ec_pp> keypair = r1cs_ppzksnark_generator<libff::default_ec_pp>(example.constraint_system);
+		printf("\n"); libff::print_indent(); libff::print_mem("after generator");
 
-		libff::print_header("R1CS ppzkSNARK Prover");
-		r1cs_ppzksnark_proof<libff::default_ec_pp> proof = r1cs_ppzksnark_prover<libff::default_ec_pp>(pk, example.primary_input, example.auxiliary_input);
-		printf("\n"); libff::print_indent(); libff::print_mem("after prover");
+		libff::print_header("Preprocess verification key");
+		r1cs_ppzksnark_processed_verification_key<libff::default_ec_pp> pvk = r1cs_ppzksnark_verifier_process_vk<libff::default_ec_pp>(keypair.vk);
+		
+        // serialize verification key
+    	ofstream outfile;
+        outfile.open("verification_key.out");
+		outfile << keypair.vk;
+		outfile.close();
 
-		// serialize proof
-		outfile.open("proof.out");
-		outfile << proof;
+        outfile.open("proving_key.out");
+		outfile << keypair.pk;
 		outfile.close();
 
 	} else {
@@ -108,3 +91,4 @@ int main(int argc, char **argv) {
 
 	return 0;
 }
+
