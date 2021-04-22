@@ -14,27 +14,32 @@
 #include <libsnark/zk_proof_systems/ppzksnark/r1cs_gg_ppzksnark/examples/run_r1cs_gg_ppzksnark.hpp>
 #include <libsnark/zk_proof_systems/ppzksnark/r1cs_gg_ppzksnark/r1cs_gg_ppzksnark.hpp>
 #include <libsnark/common/default_types/r1cs_gg_ppzksnark_pp.hpp>
+#include <assert.h>
 
 int main(int argc, char **argv) {
+    // this file expects 4 inputs:
+    // a circuit description file (something like 'blah.arith')
+    // the public+private inputs to the circuit (something like 'blah.in')
+    // both of these are produced by jsnark CircuitGenerator.prepFiles('blah');
+    // This file also expects that you ran generator.cpp which creates the following file:
+    // "/tmp/trisa_proving_key.out" - the key the prover uses
+    // This file produces the following outputs:
+    // "/tmp/trisa_proof.out" - the zk proof
+    // "/tmp/trisa_public_input.in" - the public inputs to the circuit
+    // which you can then provide to the verifier with the verification key to validate the circuit is correct.
+
+    assert(argc == 3);
+    char * circuit_arith_filepath = argv[1];
+    char * circuit_inputs_filepath = argv[2];
+
 
 	libff::start_profiling();
 	gadgetlib2::initPublicParamsFromDefaultPp();
 	gadgetlib2::GadgetLibAdapter::resetVariableIndex();
 	ProtoboardPtr pb = gadgetlib2::Protoboard::create(gadgetlib2::R1P);
 
-	int inputStartIndex = 0;
-	if(argc == 4){
-		if(strcmp(argv[1], "gg") != 0){
-			cout << "Invalid Argument - Terminating.." << endl;
-			return -1;
-		} else{
-			cout << "Using ppzsknark in the generic group model [Gro16]." << endl;
-		}
-		inputStartIndex = 1;	
-	} 	
 
-	// Read the circuit, evaluate, and translate constraints
-	CircuitReader reader(argv[1 + inputStartIndex], argv[2 + inputStartIndex], pb);
+	CircuitReader reader(circuit_arith_filepath, circuit_inputs_filepath, pb);
 	r1cs_constraint_system<FieldT> cs = get_constraint_system_from_gadgetlib2(
 			*pb);
 	const r1cs_variable_assignment<FieldT> full_assignment =
@@ -50,7 +55,7 @@ int main(int argc, char **argv) {
 
     // Serialize public input (and output).
 	ofstream outfile;
-	outfile.open("public_input.in");
+	outfile.open("/tmp/trisa_public_input.in");
     outfile << primary_input;
 	// std::vector<Wire> inputList = reader.getInputWireIds();
 	// int start = 0;
@@ -77,13 +82,13 @@ int main(int argc, char **argv) {
 
 
 	r1cs_example<FieldT> example(cs, primary_input, auxiliary_input);
-	
+
 	const bool test_serialization = false;
 	bool successBit = false;
 	if(argc == 3) {
         ifstream infile;
         r1cs_ppzksnark_proving_key<libff::default_ec_pp> pk = r1cs_ppzksnark_proving_key<libff::default_ec_pp>();
-        infile.open("proving_key.out");
+        infile.open("/tmp/trisa_proving_key.out");
         infile >> pk;
         infile.close();
         cout << "Deserialized proving key" << endl;
@@ -94,7 +99,7 @@ int main(int argc, char **argv) {
 		printf("\n"); libff::print_indent(); libff::print_mem("after prover");
 
 		// serialize proof
-		outfile.open("proof.out");
+		outfile.open("/tmp/trisa_proof.out");
 		outfile << proof;
 		outfile.close();
 

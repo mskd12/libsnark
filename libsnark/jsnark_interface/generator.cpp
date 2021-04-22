@@ -13,27 +13,30 @@
 #include <libsnark/zk_proof_systems/ppzksnark/r1cs_gg_ppzksnark/examples/run_r1cs_gg_ppzksnark.hpp>
 #include <libsnark/zk_proof_systems/ppzksnark/r1cs_gg_ppzksnark/r1cs_gg_ppzksnark.hpp>
 #include <libsnark/common/default_types/r1cs_gg_ppzksnark_pp.hpp>
+#include <assert.h>
 
 int main(int argc, char **argv) {
+    // this file expects 2 inputs:
+    // a circuit description file (something like 'blah.arith')
+    // the public+private inputs to the circuit (something like 'blah.in')
+    // both of these are produced by jsnark CircuitGenerator.prepFiles('blah');
+    // This file produces the following outputs:
+    // "/tmp/trisa_verification_key.out" - a verification key for the verifier
+    // "/tmp/trisa_proving_key.out" - a proving key for the prover
+
+    assert(argc == 3);
+    char * circuit_arith_filepath = argv[1];
+    char * circuit_inputs_filepath = argv[2];
 
 	libff::start_profiling();
 	gadgetlib2::initPublicParamsFromDefaultPp();
 	gadgetlib2::GadgetLibAdapter::resetVariableIndex();
 	ProtoboardPtr pb = gadgetlib2::Protoboard::create(gadgetlib2::R1P);
 
-	int inputStartIndex = 0;
-	if(argc == 4){
-		if(strcmp(argv[1], "gg") != 0){
-			cout << "Invalid Argument - Terminating.." << endl;
-			return -1;
-		} else{
-			cout << "Using ppzsknark in the generic group model [Gro16]." << endl;
-		}
-		inputStartIndex = 1;	
-	} 	
+
 
 	// Read the circuit, evaluate, and translate constraints
-	CircuitReader reader(argv[1 + inputStartIndex], argv[2 + inputStartIndex], pb);
+	CircuitReader reader(circuit_arith_filepath, circuit_inputs_filepath, pb);
 	r1cs_constraint_system<FieldT> cs = get_constraint_system_from_gadgetlib2(
 			*pb);
 	const r1cs_variable_assignment<FieldT> full_assignment =
@@ -58,7 +61,7 @@ int main(int argc, char **argv) {
 
 
 	r1cs_example<FieldT> example(cs, primary_input, auxiliary_input);
-	
+
 	const bool test_serialization = false;
 	bool successBit = false;
 	if(argc == 3) {
@@ -70,19 +73,20 @@ int main(int argc, char **argv) {
 
 		libff::print_header("Preprocess verification key");
 		r1cs_ppzksnark_processed_verification_key<libff::default_ec_pp> pvk = r1cs_ppzksnark_verifier_process_vk<libff::default_ec_pp>(keypair.vk);
-		
+
         // serialize verification key
     	ofstream outfile;
-        outfile.open("verification_key.out");
+        outfile.open("/tmp/trisa_verification_key.out");
 		outfile << keypair.vk;
 		outfile.close();
 
-        outfile.open("proving_key.out");
+        outfile.open("/tmp/trisa_verification_key.out");
+        outfile.open("/tmp/trisa_proving_key.out");
 		outfile << keypair.pk;
 		outfile.close();
 
 	} else {
-		// The following code makes use of the observation that 
+		// The following code makes use of the observation that
 		// libsnark::default_r1cs_gg_ppzksnark_pp is the same as libff::default_ec_pp (see r1cs_gg_ppzksnark_pp.hpp)
 		// otherwise, the following code won't work properly, as GadgetLib2 is hardcoded to use libff::default_ec_pp.
 		successBit = libsnark::run_r1cs_gg_ppzksnark<libsnark::default_r1cs_gg_ppzksnark_pp>(
