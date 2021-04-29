@@ -22,15 +22,19 @@ int main(int argc, char **argv) {
     // the public+private inputs to the circuit (something like 'blah.in')
     // both of these are produced by jsnark CircuitGenerator.prepFiles('blah');
     // This file also expects that you ran generator.cpp which creates the following file:
-    // "/tmp/trisa_proving_key.out" - the key the prover uses
+    // argv[3] - something like "/tmp/trisa_proving_key.out" - the key the prover uses
     // This file produces the following outputs:
-    // "/tmp/trisa_proof.out" - the zk proof
-    // "/tmp/trisa_public_input.in" - the public inputs to the circuit
+    // argv[4] - "/tmp/trisa_proof.out" - the zk proof
+    // argv[5] - "/tmp/trisa_public_input.in" - the public inputs to the circuit
     // which you can then provide to the verifier with the verification key to validate the circuit is correct.
 
-    assert(argc == 3);
+    assert(argc == 6);
     char * circuit_arith_filepath = argv[1];
     char * circuit_inputs_filepath = argv[2];
+    char * proving_key_filepath = argv[3];
+
+    char * proof_out_filepath = argv[4];
+    char * public_inputs_out_filepath = argv[5];
 
 
 	libff::start_profiling();
@@ -55,7 +59,7 @@ int main(int argc, char **argv) {
 
     // Serialize public input (and output).
 	ofstream outfile;
-	outfile.open("/tmp/trisa_public_input.in");
+	outfile.open(public_inputs_out_filepath);
     outfile << primary_input;
 	// std::vector<Wire> inputList = reader.getInputWireIds();
 	// int start = 0;
@@ -83,33 +87,24 @@ int main(int argc, char **argv) {
 
 	r1cs_example<FieldT> example(cs, primary_input, auxiliary_input);
 
-	const bool test_serialization = false;
-	bool successBit = false;
-	if(argc == 3) {
-        ifstream infile;
-        r1cs_ppzksnark_proving_key<libff::default_ec_pp> pk = r1cs_ppzksnark_proving_key<libff::default_ec_pp>();
-        infile.open("/tmp/trisa_proving_key.out");
-        infile >> pk;
-        infile.close();
-        cout << "Deserialized proving key" << endl;
+
+    ifstream infile;
+    r1cs_ppzksnark_proving_key<libff::default_ec_pp> pk = r1cs_ppzksnark_proving_key<libff::default_ec_pp>();
+    infile.open(proving_key_filepath);
+    infile >> pk;
+    infile.close();
+    cout << "Deserialized proving key" << endl;
 
 
-		libff::print_header("R1CS ppzkSNARK Prover");
-		r1cs_ppzksnark_proof<libff::default_ec_pp> proof = r1cs_ppzksnark_prover<libff::default_ec_pp>(pk, example.primary_input, example.auxiliary_input);
-		printf("\n"); libff::print_indent(); libff::print_mem("after prover");
+    libff::print_header("R1CS ppzkSNARK Prover");
+    r1cs_ppzksnark_proof<libff::default_ec_pp> proof = r1cs_ppzksnark_prover<libff::default_ec_pp>(pk, example.primary_input, example.auxiliary_input);
+    printf("\n"); libff::print_indent(); libff::print_mem("after prover");
 
-		// serialize proof
-		outfile.open("/tmp/trisa_proof.out");
-		outfile << proof;
-		outfile.close();
+    // serialize proof
+    outfile.open(proof_out_filepath);
+    outfile << proof;
+    outfile.close();
 
-	} else {
-		// The following code makes use of the observation that 
-		// libsnark::default_r1cs_gg_ppzksnark_pp is the same as libff::default_ec_pp (see r1cs_gg_ppzksnark_pp.hpp)
-		// otherwise, the following code won't work properly, as GadgetLib2 is hardcoded to use libff::default_ec_pp.
-		successBit = libsnark::run_r1cs_gg_ppzksnark<libsnark::default_r1cs_gg_ppzksnark_pp>(
-			example, test_serialization);
-	}
 
 	return 0;
 }

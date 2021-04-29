@@ -21,12 +21,14 @@ int main(int argc, char **argv) {
     // the public+private inputs to the circuit (something like 'blah.in')
     // both of these are produced by jsnark CircuitGenerator.prepFiles('blah');
     // This file produces the following outputs:
-    // "/tmp/trisa_verification_key.out" - a verification key for the verifier
-    // "/tmp/trisa_proving_key.out" - a proving key for the prover
+    // argv[3] e.g. "/tmp/trisa_verification_key.out" - a verification key for the verifier
+    // argv[4] e.g. "/tmp/trisa_proving_key.out" - a proving key for the prover
 
-    assert(argc == 3);
+    assert(argc == 5);
     char * circuit_arith_filepath = argv[1];
     char * circuit_inputs_filepath = argv[2];
+    char * verification_key_out_filepath = argv[3];
+    char * proving_key_out_filepath = argv[4];
 
 	libff::start_profiling();
 	gadgetlib2::initPublicParamsFromDefaultPp();
@@ -62,36 +64,27 @@ int main(int argc, char **argv) {
 
 	r1cs_example<FieldT> example(cs, primary_input, auxiliary_input);
 
-	const bool test_serialization = false;
-	bool successBit = false;
-	if(argc == 3) {
-		libff::enter_block("Call to run_r1cs_ppzksnark");
 
-		libff::print_header("R1CS ppzkSNARK Generator");
-		r1cs_ppzksnark_keypair<libff::default_ec_pp> keypair = r1cs_ppzksnark_generator<libff::default_ec_pp>(example.constraint_system);
-		printf("\n"); libff::print_indent(); libff::print_mem("after generator");
 
-		libff::print_header("Preprocess verification key");
-		r1cs_ppzksnark_processed_verification_key<libff::default_ec_pp> pvk = r1cs_ppzksnark_verifier_process_vk<libff::default_ec_pp>(keypair.vk);
 
-        // serialize verification key
-    	ofstream outfile;
-        outfile.open("/tmp/trisa_verification_key.out");
-		outfile << keypair.vk;
-		outfile.close();
+    libff::enter_block("Call to run_r1cs_ppzksnark");
 
-        outfile.open("/tmp/trisa_verification_key.out");
-        outfile.open("/tmp/trisa_proving_key.out");
-		outfile << keypair.pk;
-		outfile.close();
+    libff::print_header("R1CS ppzkSNARK Generator");
+    r1cs_ppzksnark_keypair<libff::default_ec_pp> keypair = r1cs_ppzksnark_generator<libff::default_ec_pp>(example.constraint_system);
+    printf("\n"); libff::print_indent(); libff::print_mem("after generator");
 
-	} else {
-		// The following code makes use of the observation that
-		// libsnark::default_r1cs_gg_ppzksnark_pp is the same as libff::default_ec_pp (see r1cs_gg_ppzksnark_pp.hpp)
-		// otherwise, the following code won't work properly, as GadgetLib2 is hardcoded to use libff::default_ec_pp.
-		successBit = libsnark::run_r1cs_gg_ppzksnark<libsnark::default_r1cs_gg_ppzksnark_pp>(
-			example, test_serialization);
-	}
+    libff::print_header("Preprocess verification key");
+    r1cs_ppzksnark_processed_verification_key<libff::default_ec_pp> pvk = r1cs_ppzksnark_verifier_process_vk<libff::default_ec_pp>(keypair.vk);
+
+    // serialize verification key
+    ofstream outfile;
+    outfile.open(verification_key_out_filepath);
+    outfile << keypair.vk;
+    outfile.close();
+
+    outfile.open(proving_key_out_filepath);
+    outfile << keypair.pk;
+    outfile.close();
 
 	return 0;
 }
